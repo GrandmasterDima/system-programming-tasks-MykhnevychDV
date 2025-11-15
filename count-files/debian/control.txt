@@ -1,0 +1,13 @@
+Source: count-files
+Section: utils
+Priority: optional
+Maintainer: Dmytro <grandmasterdima@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.1
+Homepage: https://github.com/GrandmasterDima/count-files
+
+Package: count-files
+Architecture: all
+Depends: bash
+Description: Script to count regular files in /etc
+ A small utility that counts regular files excluding dirs and symlinks in /etc.

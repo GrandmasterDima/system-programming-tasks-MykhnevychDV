@@ -1,0 +1,5 @@
+count-files (1.0-1) unstable; urgency=medium
+
+  * Initial release
+
+ -- Dmytro <grandmasterdima@gmail.com>  Sat, 15 Nov 2025 12:00:00 +0200
