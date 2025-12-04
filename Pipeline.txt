@@ -1,0 +1,86 @@
+pipeline {
+    agent { label 'builder' } 
+
+    environment {
+        RPM_BUILD_DIR = "/home/jenkins/rpmbuild"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/GrandmasterDima/system-programming-tasks-MykhnevychDV.git'
+            }
+        }
+        stage('Build RPM') {
+            steps {
+                script {
+                    sh 'mkdir -p ${RPM_BUILD_DIR}/BUILD ${RPM_BUILD_DIR}/RPMS ${RPM_BUILD_DIR}/SOURCES ${RPM_BUILD_DIR}/SPECS ${RPM_BUILD_DIR}/SRPMS'
+                    sh 'mkdir -p ${RPM_BUILD_DIR}/rpmdb'
+                    sh 'rpm --initdb --dbpath ${RPM_BUILD_DIR}/rpmdb'
+
+                    sh '''
+                        rm -rf count-files-1.0
+                        mkdir -p count-files-1.0
+                        cp count_files.sh count-files-1.0/
+                        tar -czvf ${RPM_BUILD_DIR}/SOURCES/count_files-1.0.tar.gz count-files-1.0
+                    '''
+                    sh 'cp count_files.spec ${RPM_BUILD_DIR}/SPECS/'
+                    sh 'dos2unix ${RPM_BUILD_DIR}/SPECS/count_files.spec'
+                    
+                    sh 'rpmbuild --define "_topdir ${RPM_BUILD_DIR}" --define "_dbpath ${RPM_BUILD_DIR}/rpmdb" -ba ${RPM_BUILD_DIR}/SPECS/count_files.spec'
+                }
+            }
+        }
+
+        stage('Build DEB') {
+            steps {
+                dir('count-files') { 
+                    script {
+                        sh 'chmod +x count_files.sh'
+                        sh 'chmod +x debian/rules'
+                        sh 'dos2unix count_files.sh debian/rules'
+                        sh 'dpkg-buildpackage -us -uc -b'
+                    }
+                }
+            }
+        }
+
+        stage('Test RPM (Docker)') {
+            steps {
+                script {
+                    def rpmPath = sh(script: "find ${RPM_BUILD_DIR}/RPMS/noarch -name '*.rpm' | head -n 1", returnStdout: true).trim()
+                    echo "Testing RPM file: ${rpmPath}"
+                    
+                    sh """
+                        cat ${rpmPath} | docker run --rm -i oraclelinux:9 /bin/bash -c "
+                            cat > /tmp/package.rpm && 
+                            rpm -ivh /tmp/package.rpm && 
+                            echo '--- RPM TEST RESULT ---' &&
+                            /usr/bin/count_files
+                        "
+                    """
+                }
+            }
+        }
+
+        stage('Test DEB (Docker)') {
+            steps {
+                script {
+                    def debPath = sh(script: "find ${WORKSPACE} -name '*.deb' | head -n 1", returnStdout: true).trim()
+                    echo "Testing DEB file: ${debPath}"
+                    sh """
+                        cat ${debPath} | docker run --rm -i ubuntu:22.04 /bin/bash -c "
+                            cat > /tmp/package.deb && 
+                            dpkg -i /tmp/package.deb || apt-get update && apt-get install -f -y && 
+                            echo '--- DEB TEST RESULT ---' &&
+                            if [ -d /usr/bin/count_files ]; then
+                                /usr/bin/count_files/count_files.sh
+                            else
+                                /usr/bin/count_files
+                            fi
+                        "
+                    """
+                }
+            }
+        }
+    }
+}
