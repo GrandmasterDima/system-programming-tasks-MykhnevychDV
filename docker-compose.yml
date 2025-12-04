@@ -20,7 +20,9 @@ services:
       - JENKINS_URL=http://jenkins-master:8080
       - JENKINS_AGENT_NAME=builder
       - JENKINS_WEB_SOCKET=true
-      - JENKINS_SECRET=Мій секретний код
+      - JENKINS_SECRET=тут мій код
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - jenkins-net
 
