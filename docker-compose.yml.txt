@@ -1,0 +1,31 @@
+services:
+  jenkins-master:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins-master
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-net
+  jenkins-builder:
+    build: .
+    container_name: jenkins-builder
+    restart: always
+    environment:
+      - JENKINS_URL=http://jenkins-master:8080
+      - JENKINS_AGENT_NAME=builder
+      - JENKINS_WEB_SOCKET=true
+      - JENKINS_SECRET=Мій секретний код
+    networks:
+      - jenkins-net
+
+volumes:
+  jenkins_home:
+
+networks:
+  jenkins-net:
